@@ -795,7 +795,7 @@ public final class Module {
                 final PathFilter importFilter = dependency.getImportFilter();
                 final FastCopyHashSet<PathFilter> filterStack = new FastCopyHashSet<PathFilter>();
                 filterStack.add(importFilter);
-                module.addExportedPaths(module.getDependencies(), map, filterStack, visited);
+                module.addExportedPaths(module.getDependencies(), map, filterStack, importFilter, visited);
             } else if (dependency instanceof ModuleClassLoaderDependency) {
                 final ModuleClassLoaderDependency classLoaderDependency = (ModuleClassLoaderDependency) dependency;
                 final LocalLoader localLoader = classLoaderDependency.getLocalLoader();
@@ -834,11 +834,28 @@ public final class Module {
     }
 
     void addExportedPaths(Dependency[] dependencies, Map<String, List<LocalLoader>> map) throws ModuleLoadException {
-        addExportedPaths(dependencies, map, new FastCopyHashSet<PathFilter>(), new FastCopyHashSet<Visited>());
+        addExportedPaths(dependencies, map, new FastCopyHashSet<PathFilter>(), PathFilters.acceptAll(), new FastCopyHashSet<Visited>());
     }
 
-    void addExportedPaths(Dependency[] dependencies, Map<String, List<LocalLoader>> map, FastCopyHashSet<PathFilter> filterStack, Set<Visited> visited) throws ModuleLoadException {
+    void addExportedPaths(Dependency[] dependencies, Map<String, List<LocalLoader>> map, FastCopyHashSet<PathFilter> filterStack, PathFilter lastFilter, Set<Visited> visited) throws ModuleLoadException {
         if (!visited.add(new Visited(this, filterStack))) {
+            return;
+        }
+        final Linkage myLinkage = linkage;
+        if (myLinkage.getState() == Linkage.State.LINKED && myLinkage.getSourceList() == dependencies) {
+            // use cached info!
+            final Map<String, List<LocalLoader>> exportedPaths = myLinkage.getExportedPaths();
+            OUTER: for (String path : exportedPaths.keySet()) {
+                if (! lastFilter.accept(path)) {
+                    continue;
+                }
+                final List<LocalLoader> loaders = exportedPaths.get(path);
+                if (map.containsKey(path)) {
+                    map.get(path).addAll(loaders);
+                } else {
+                    map.put(path, loaders);
+                }
+            }
             return;
         }
         moduleLoader.incScanCount();
@@ -869,12 +886,12 @@ public final class Module {
                 if (exportFilter != PathFilters.rejectAll()) {
                     final PathFilter importFilter = dependency.getImportFilter();
                     if (filterStack.contains(importFilter) && filterStack.contains(exportFilter)) {
-                        module.addExportedPaths(module.getDependencies(), map, filterStack, visited);
+                        module.addExportedPaths(module.getDependencies(), map, filterStack, PathFilters.acceptAll(), visited);
                     } else {
                         final FastCopyHashSet<PathFilter> clone = filterStack.clone();
                         clone.add(importFilter);
                         clone.add(exportFilter);
-                        module.addExportedPaths(module.getDependencies(), map, clone, visited);
+                        module.addExportedPaths(module.getDependencies(), map, clone, PathFilters.all(importFilter, exportFilter), visited);
                     }
                 }
             } else if (dependency instanceof ModuleClassLoaderDependency) {
