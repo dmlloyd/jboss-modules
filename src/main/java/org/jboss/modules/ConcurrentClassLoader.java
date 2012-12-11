@@ -59,9 +59,15 @@ public abstract class ConcurrentClassLoader extends SecureClassLoader {
     private static final ThreadLocal<Boolean> GET_PACKAGE_SUPPRESSOR = new ThreadLocal<Boolean>();
 
     static {
+        boolean fullConcurrent = false;
         try {
-            ClassLoader.registerAsParallelCapable();
+            ClassLoader.registerAsFullyConcurrent();
+            fullConcurrent = true;
         } catch (Throwable ignored) {
+            try {
+                ClassLoader.registerAsParallelCapable();
+            } catch (Throwable ignored2) {
+            }
         }
         /*
          This resolves a known deadlock that can occur if one thread is in the process of defining a package as part of
@@ -81,9 +87,9 @@ public abstract class ConcurrentClassLoader extends SecureClassLoader {
         }
         final boolean isJRockit = AccessController.doPrivileged(new PropertyReadAction("java.vm.name", "")).toUpperCase(Locale.US).contains("JROCKIT");
         // But the user is always right, so if they override, respect it
-        LOCKLESS = Boolean.parseBoolean(AccessController.doPrivileged(new PropertyReadAction("jboss.modules.lockless", Boolean.toString(is16 && hasUnsafe && ! isJRockit))));
+        LOCKLESS = ! fullConcurrent && Boolean.parseBoolean(AccessController.doPrivileged(new PropertyReadAction("jboss.modules.lockless", Boolean.toString(is16 && hasUnsafe && ! isJRockit))));
         // If the JDK has safe CL, set this flag
-        SAFE_JDK = Boolean.parseBoolean(AccessController.doPrivileged(new PropertyReadAction("jboss.modules.safe-jdk", Boolean.toString(isJRockit))));
+        SAFE_JDK = fullConcurrent || Boolean.parseBoolean(AccessController.doPrivileged(new PropertyReadAction("jboss.modules.safe-jdk", Boolean.toString(isJRockit))));
     }
 
     /**
