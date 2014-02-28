@@ -122,6 +122,20 @@ final class ModuleXmlParser {
     private static final String D_EXPORT = "export";
 
     static ModuleSpec parseModuleXml(final ModuleLoader moduleLoader, final ModuleIdentifier moduleIdentifier, final File root, final File moduleInfoFile, final AccessControlContext context) throws ModuleLoadException, IOException {
+        return parseModuleXml(new ResourceRootFactory() {
+            public ResourceLoader createResourceLoader(final String rootPath, final String loaderPath, final String loaderName) throws IOException {
+                File file = new File(rootPath, loaderPath);
+                if (file.isDirectory()) {
+                    return new FileResourceLoader(loaderName, file, context);
+                } else {
+                    final JarFile jarFile = new JarFile(file, true);
+                    return new JarFileResourceLoader(loaderName, jarFile);
+                }
+            }
+        }, moduleLoader, moduleIdentifier, root, moduleInfoFile, context);
+    }
+
+    static ModuleSpec parseModuleXml(final ResourceRootFactory factory, final ModuleLoader moduleLoader, final ModuleIdentifier moduleIdentifier, final File root, final File moduleInfoFile, final AccessControlContext context) throws ModuleLoadException, IOException {
         final FileInputStream fis;
         try {
             fis = new FileInputStream(moduleInfoFile);
@@ -129,17 +143,7 @@ final class ModuleXmlParser {
             throw new ModuleLoadException("No module.xml file found at " + moduleInfoFile);
         }
         try {
-            return parseModuleXml(new ResourceRootFactory() {
-                    public ResourceLoader createResourceLoader(final String rootPath, final String loaderPath, final String loaderName) throws IOException {
-                        File file = new File(rootPath, loaderPath);
-                        if (file.isDirectory()) {
-                            return new FileResourceLoader(loaderName, file, context);
-                        } else {
-                            final JarFile jarFile = new JarFile(file, true);
-                            return new JarFileResourceLoader(loaderName, jarFile);
-                        }
-                    }
-             }, root.getPath(), new BufferedInputStream(fis), moduleInfoFile.getPath(), moduleLoader, moduleIdentifier);
+            return parseModuleXml(factory, root.getPath(), new BufferedInputStream(fis), moduleInfoFile.getPath(), moduleLoader, moduleIdentifier);
         } finally {
             StreamUtil.safeClose(fis);
         }

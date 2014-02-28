@@ -133,7 +133,7 @@ public final class LocalModuleFinder implements ModuleFinder {
         return files;
     }
 
-    private static String toPathString(ModuleIdentifier moduleIdentifier) {
+    static String toPathString(ModuleIdentifier moduleIdentifier) {
         final StringBuilder builder = new StringBuilder(40);
         builder.append(moduleIdentifier.getName().replace('.', File.separatorChar));
         builder.append(File.separatorChar).append(moduleIdentifier.getSlot());

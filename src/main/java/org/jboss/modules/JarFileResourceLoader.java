@@ -60,6 +60,7 @@ final class JarFileResourceLoader extends AbstractResourceLoader implements Iter
 
     private final JarFile jarFile;
     private final String rootName;
+    private final URL codeSourceUrl;
     private final URL rootUrl;
     private final String relativePath;
     private final File fileOfJar;
@@ -75,6 +76,28 @@ final class JarFileResourceLoader extends AbstractResourceLoader implements Iter
         if (rootName == null) {
             throw new IllegalArgumentException("rootName is null");
         }
+        fileOfJar = new File(jarFile.getName());
+        this.jarFile = jarFile;
+        this.rootName = rootName;
+        final String realPath = relativePath == null ? null : PathUtils.canonicalize(relativePath);
+        this.relativePath = realPath;
+        try {
+            codeSourceUrl = rootUrl = getJarURI(fileOfJar.toURI(), realPath).toURL();
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid root file specified", e);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Invalid root file specified", e);
+        }
+    }
+
+    JarFileResourceLoader(final String rootName, final JarFile jarFile, final String relativePath, final URL codeSourceUrl) {
+        if (jarFile == null) {
+            throw new IllegalArgumentException("jarFile is null");
+        }
+        if (rootName == null) {
+            throw new IllegalArgumentException("rootName is null");
+        }
+        this.codeSourceUrl = codeSourceUrl;
         fileOfJar = new File(jarFile.getName());
         this.jarFile = jarFile;
         this.rootName = rootName;
@@ -137,7 +160,7 @@ final class JarFileResourceLoader extends AbstractResourceLoader implements Iter
                 baos.close();
                 is.close();
                 spec.setBytes(baos.toByteArray());
-                spec.setCodeSource(new CodeSource(rootUrl, entry.getCodeSigners()));
+                spec.setCodeSource(new CodeSource(codeSourceUrl, entry.getCodeSigners()));
                 return spec;
             } else if (size <= (long) Integer.MAX_VALUE) {
                 final int castSize = (int) size;
@@ -151,7 +174,7 @@ final class JarFileResourceLoader extends AbstractResourceLoader implements Iter
                 // done
                 is.close();
                 spec.setBytes(bytes);
-                spec.setCodeSource(new CodeSource(rootUrl, entry.getCodeSigners()));
+                spec.setCodeSource(new CodeSource(codeSourceUrl, entry.getCodeSigners()));
                 return spec;
             } else {
                 throw new IOException("Resource is too large to be a valid class file");
@@ -182,7 +205,7 @@ final class JarFileResourceLoader extends AbstractResourceLoader implements Iter
                 }
             }
         }
-        return getPackageSpec(name, manifest, rootUrl);
+        return getPackageSpec(name, manifest, codeSourceUrl);
     }
 
     public String getLibrary(final String name) {
