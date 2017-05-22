@@ -43,6 +43,7 @@ import java.util.zip.ZipFile;
 
 import org.jboss.modules.AssertionSetting;
 import org.jboss.modules.DependencySpec;
+import org.jboss.modules.ModuleNotFoundException;
 import org.jboss.modules.Version;
 import org.jboss.modules.maven.ArtifactCoordinates;
 import org.jboss.modules.maven.MavenArtifactUtil;
@@ -295,7 +296,11 @@ public final class ModuleXmlParser {
             final MXParser parser = new MXParser();
             parser.setFeature(FEATURE_PROCESS_NAMESPACES, true);
             parser.setInput(source, null);
-            return parseDocument(mavenResolver, factory, rootPath, parser, moduleLoader, moduleName);
+            final ModuleSpec result = parseDocument(mavenResolver, factory, rootPath, parser, moduleLoader, moduleName);
+            if (result == null) {
+                throw new ModuleNotFoundException(moduleName + ": Module explicitly does not exist");
+            }
+            return result;
         } catch (XmlPullParserException e) {
             throw new ModuleLoadException("Error loading module from " + moduleInfoFile, e);
         } finally {

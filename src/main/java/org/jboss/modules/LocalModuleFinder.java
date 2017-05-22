@@ -22,10 +22,13 @@ import java.io.File;
 import java.io.FilePermission;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.nio.file.*;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+
+import com.sun.security.auth.module.UnixSystem;
 import org.jboss.modules.filter.PathFilter;
 import org.jboss.modules.filter.PathFilters;
 import org.jboss.modules.xml.ModuleXmlParser;
@@ -164,7 +167,7 @@ public final class LocalModuleFinder implements ModuleFinder {
                 }
             }
         }
-        return null;
+        throw new ModuleNotFoundException(name + ": Path filter does not accept \"" + child1 + "\" or \"" + child2 + "\"");
     }
 
     /**
@@ -194,22 +197,23 @@ public final class LocalModuleFinder implements ModuleFinder {
      * @throws ModuleLoadException if creating the module specification failed (e.g. due to a parse error)
      */
     public static ModuleSpec parseModuleXmlFile(final String name, final ModuleLoader delegateLoader, final File... roots) throws IOException, ModuleLoadException {
-        final String child1 = toPathString(name);
         final String child2 = toLegacyPathString(name);
         for (File root : roots) {
-            File file = new File(root, child1);
-            File moduleXml = new File(file, MODULE_FILE);
-            if (! moduleXml.exists()) {
-                file = new File(root, child2);
-                moduleXml = new File(file, MODULE_FILE);
+            Path path = root.toPath().resolve(child2);
+            Path moduleXml = path.resolve(MODULE_FILE);
+            try {
+                path.getFileSystem().provider().checkAccess(path, AccessMode.READ);
+            } catch (NoSuchFileException ignored) {
+                continue;
+            } catch (IOException e) {
+                final UnixSystem unixSystem = new UnixSystem();
+                throw new ModuleNotFoundException(name + ": Reading as " + unixSystem.getUid() + " id " + unixSystem.getUid(), e);
             }
-            if (moduleXml.exists()) {
-                final ModuleSpec spec = ModuleXmlParser.parseModuleXml(delegateLoader, name, file, moduleXml);
-                if (spec == null) break;
-                return spec;
-            }
+            final ModuleSpec spec = ModuleXmlParser.parseModuleXml(delegateLoader, name, path.toFile(), moduleXml.toFile());
+            if (spec == null) break;
+            return spec;
         }
-        return null;
+        throw new ModuleNotFoundException(name + ": File \"" + MODULE_FILE + "\" does not exist in any roots");
     }
 
     public String toString() {
