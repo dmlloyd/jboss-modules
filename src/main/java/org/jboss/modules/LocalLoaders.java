@@ -43,7 +43,11 @@ public final class LocalLoaders {
      * @return the filtered loader
      */
     public static LocalLoader createPathFilteredLocalLoader(final PathFilter pathFilter, final LocalLoader originalLoader) {
-        return new FilteredLocalLoader(ClassFilters.acceptAll(), pathFilter, originalLoader);
+        if (originalLoader instanceof IterableLocalLoader) {
+            return new FilteredIterableLocalLoader(ClassFilters.acceptAll(), pathFilter, (IterableLocalLoader) originalLoader);
+        } else {
+            return new FilteredLocalLoader(ClassFilters.acceptAll(), pathFilter, originalLoader);
+        }
     }
 
     /**
@@ -65,7 +69,11 @@ public final class LocalLoaders {
      * @return the filtered loader
      */
     public static LocalLoader createClassFilteredLocalLoader(final ClassFilter classFilter, final LocalLoader originalLoader) {
-        return new FilteredLocalLoader(classFilter, PathFilters.acceptAll(), originalLoader);
+        if (originalLoader instanceof IterableLocalLoader) {
+            return new FilteredIterableLocalLoader(classFilter, PathFilters.acceptAll(), (IterableLocalLoader) originalLoader);
+        } else {
+            return new FilteredLocalLoader(classFilter, PathFilters.acceptAll(), originalLoader);
+        }
     }
 
     /**
@@ -88,7 +96,11 @@ public final class LocalLoaders {
      * @return the filtered loader
      */
     public static LocalLoader createFilteredLocalLoader(final ClassFilter classFilter, final PathFilter resourcePathFilter, final LocalLoader originalLoader) {
-        return new FilteredLocalLoader(classFilter, resourcePathFilter, originalLoader);
+        if (originalLoader instanceof IterableLocalLoader) {
+            return new FilteredIterableLocalLoader(classFilter, resourcePathFilter, (IterableLocalLoader) originalLoader);
+        } else {
+            return new FilteredLocalLoader(classFilter, resourcePathFilter, originalLoader);
+        }
     }
 
     /**
