@@ -147,11 +147,13 @@ public class FileSystemClassPathModuleFinder implements ModuleFinder {
                 // assume some kind of JAR file
                 final JarFile jarFile = JDKSpecific.getJarFile(canonName, true);
                 try {
+                    final Manifest jarManifest;
                     try {
-                        manifest = jarFile.getManifest();
+                        jarManifest = jarFile.getManifest();
                     } catch (IOException e) {
                         throw new ModuleLoadException("Failed to load MANIFEST from " + path, e);
                     }
+                    manifest = jarManifest == null ? new Manifest() : jarManifest;
                     resourceLoader = new JarFileResourceLoader(fileName, jarFile);
                 } catch (Throwable t) {
                     try {
