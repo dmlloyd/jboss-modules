@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -37,6 +38,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.function.Supplier;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
@@ -112,6 +115,29 @@ public class FileSystemClassPathModuleFinder implements ModuleFinder {
     }
 
     public ModuleSpec findModule(final String name, final ModuleLoader delegateLoader) throws ModuleLoadException {
+        final SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            try {
+                return AccessController.doPrivileged(new PrivilegedExceptionAction<ModuleSpec>() {
+                    public ModuleSpec run() throws ModuleLoadException {
+                        return doFindModule(name, delegateLoader);
+                    }
+                }, context);
+            } catch (PrivilegedActionException pae) {
+                try {
+                    throw pae.getCause();
+                } catch (RuntimeException | Error | ModuleLoadException e) {
+                    throw e;
+                } catch (Throwable t) {
+                    throw new UndeclaredThrowableException(t);
+                }
+            }
+        } else {
+            return doFindModule(name, delegateLoader);
+        }
+    }
+
+    private ModuleSpec doFindModule(final String name, final ModuleLoader delegateLoader) throws ModuleLoadException {
         if (PathUtils.isRelative(name)) {
             throw new ModuleLoadException("Only absolute paths may be loaded by this loader");
         }
