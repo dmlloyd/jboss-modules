@@ -31,6 +31,8 @@ import java.io.InputStream;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -65,6 +67,7 @@ public class FileSystemClassPathModuleFinder implements ModuleFinder {
     static final ModuleLoader EMPTY_MODULE_LOADER = new ModuleLoader();
     static final SimpleSupplier<ModuleLoader> EMPTY_MODULE_LOADER_SUPPLIER = new SimpleSupplier<>(EMPTY_MODULE_LOADER);
 
+    private final FileSystem fileSystem;
     private final AccessControlContext context;
     private final Supplier<ModuleLoader> baseModuleLoaderSupplier;
     private final Supplier<ModuleLoader> extensionModuleLoaderSupplier;
@@ -93,6 +96,18 @@ public class FileSystemClassPathModuleFinder implements ModuleFinder {
      * @param extensionModuleLoaderSupplier a supplier which yields a module loader for loading extensions (must not be {@code null})
      */
     public FileSystemClassPathModuleFinder(final ModuleLoader baseModuleLoader, final Supplier<ModuleLoader> extensionModuleLoaderSupplier) {
+        this(FileSystems.getDefault(), baseModuleLoader, extensionModuleLoaderSupplier);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param baseModuleLoader the module loader to use to load module dependencies from (must not be {@code null})
+     * @param extensionModuleLoaderSupplier a supplier which yields a module loader for loading extensions (must not be {@code null})
+     */
+    public FileSystemClassPathModuleFinder(final FileSystem fileSystem, final ModuleLoader baseModuleLoader, final Supplier<ModuleLoader> extensionModuleLoaderSupplier) {
+        if (fileSystem == null) throw new IllegalArgumentException("fileSystem is null");
+        this.fileSystem = fileSystem;
         if (baseModuleLoader == null) throw new IllegalArgumentException("baseModuleLoader is null");
         this.baseModuleLoaderSupplier = new SimpleSupplier<>(baseModuleLoader);
         if (extensionModuleLoaderSupplier == null) throw new IllegalArgumentException("extensionModuleLoaderSupplier is null");
@@ -107,6 +122,18 @@ public class FileSystemClassPathModuleFinder implements ModuleFinder {
      * @param extensionModuleLoaderSupplier a supplier which yields a module loader for loading extensions (must not be {@code null})
      */
     public FileSystemClassPathModuleFinder(final Supplier<ModuleLoader> baseModuleLoaderSupplier, final Supplier<ModuleLoader> extensionModuleLoaderSupplier) {
+        this(FileSystems.getDefault(), baseModuleLoaderSupplier, extensionModuleLoaderSupplier);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param baseModuleLoaderSupplier the supplier to supply a module loader for loading dependencies (must not be {@code null})
+     * @param extensionModuleLoaderSupplier a supplier which yields a module loader for loading extensions (must not be {@code null})
+     */
+    public FileSystemClassPathModuleFinder(final FileSystem fileSystem, final Supplier<ModuleLoader> baseModuleLoaderSupplier, final Supplier<ModuleLoader> extensionModuleLoaderSupplier) {
+        if (fileSystem == null) throw new IllegalArgumentException("fileSystem is null");
+        this.fileSystem = fileSystem;
         if (baseModuleLoaderSupplier == null) throw new IllegalArgumentException("baseModuleLoaderSupplier is null");
         this.baseModuleLoaderSupplier = baseModuleLoaderSupplier;
         if (extensionModuleLoaderSupplier == null) throw new IllegalArgumentException("extensionModuleLoaderSupplier is null");
@@ -152,7 +179,7 @@ public class FileSystemClassPathModuleFinder implements ModuleFinder {
         try {
             final Manifest manifest;
             final ModuleSpec.Builder builder = ModuleSpec.build(canonName);
-            final Path path = Paths.get(canonName);
+            final Path path = fileSystem.getPath(canonName);
             final ResourceLoader resourceLoader;
             final ModuleLoader fatModuleLoader;
             final ModuleLoader baseModuleLoader = baseModuleLoaderSupplier.get();
@@ -314,7 +341,7 @@ public class FileSystemClassPathModuleFinder implements ModuleFinder {
 
     public String toString() {
         final StringBuilder b = new StringBuilder();
-        b.append("filesystem module finder @").append(Integer.toHexString(hashCode())).append(" (base module loader: ").append(baseModuleLoaderSupplier.get()).append(')');
+        b.append("filesystem module finder @").append(Integer.toHexString(hashCode())).append(" for filesystem ").append(fileSystem).append(" (base module loader: ").append(baseModuleLoaderSupplier.get()).append(')');
         return b.toString();
     }
 }
