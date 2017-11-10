@@ -67,4 +67,10 @@ public final class FatJarModuleFinder implements ModuleFinder {
         final ModuleIdentifier moduleIdentifier = ModuleIdentifier.fromString(moduleName);
         return moduleIdentifier.getName().replace('.', '/') + '/' + moduleIdentifier.getSlot();
     }
+
+    public String toString() {
+        final StringBuilder b = new StringBuilder();
+        b.append("fat JAR module finder @").append(Integer.toHexString(hashCode())).append(" (for: ").append(jarFile.getName()).append(')');
+        return b.toString();
+    }
 }

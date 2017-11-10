@@ -1214,7 +1214,7 @@ public final class Module {
                 }
                 if (module == null) {
                     if (!moduleDependency.isOptional()) {
-                        throw new ModuleNotFoundException(name);
+                        throw new ModuleNotFoundException(name + " from " + moduleLoader);
                     }
                     continue;
                 }

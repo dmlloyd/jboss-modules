@@ -285,4 +285,10 @@ public class FileSystemClassPathModuleFinder implements ModuleFinder {
         // add our own content
         builder.addResourceRoot(ResourceLoaderSpec.createResourceLoaderSpec(resourceLoader, NO_MODULES_DIR));
     }
+
+    public String toString() {
+        final StringBuilder b = new StringBuilder();
+        b.append("filesystem module finder @").append(Integer.toHexString(hashCode())).append(" (base module loader: ").append(baseModuleLoaderSupplier.get()).append(')');
+        return b.toString();
+    }
 }

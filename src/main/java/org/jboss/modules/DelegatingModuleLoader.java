@@ -63,4 +63,8 @@ public class DelegatingModuleLoader extends ModuleLoader {
         }
         return module;
     }
+
+    public String toString() {
+        return super.toString() + " delegating to " + delegate;
+    }
 }
