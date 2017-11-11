@@ -19,7 +19,9 @@
 package org.jboss.modules;
 
 import java.lang.reflect.InvocationTargetException;
+import java.security.AccessController;
 import java.security.PermissionCollection;
+import java.security.PrivilegedAction;
 import java.security.ProtectionDomain;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -68,6 +70,7 @@ public class ModuleClassLoader extends ConcurrentClassLoader {
 
     private final Module module;
     private final ClassFileTransformer transformer;
+    private final SharedClassCache sharedClassCache;
 
     private final AtomicReference<Paths<ResourceLoader, ResourceLoaderSpec>> paths = new AtomicReference<>(Paths.<ResourceLoader, ResourceLoaderSpec>none());
 
@@ -118,6 +121,11 @@ public class ModuleClassLoader extends ConcurrentClassLoader {
             setDefaultAssertionStatus(setting == AssertionSetting.ENABLED);
         }
         transformer = configuration.getTransformer();
+        sharedClassCache = AccessController.doPrivileged(new PrivilegedAction<SharedClassCache>() {
+            public SharedClassCache run() {
+                return SharedClassCacheFactory.getInstance().getCache(new CheckedClassLoaderSupplier(ModuleClassLoader.this));
+            }
+        });
     }
 
     /**
@@ -272,6 +280,10 @@ public class ModuleClassLoader extends ConcurrentClassLoader {
                             throw new ClassNotFoundException("Failed to preDefine class: " + className, th);
                         }
                         final Class<?> clazz = defineClass(className, classSpec, resourceLoader);
+                        if (! classSpec.isShared()) {
+                            // try to store it
+                            sharedClassCache.storeSharedClass(classSpec.getCodeSource().getLocation(), clazz);
+                        }
                         try {
                             postDefine(classSpec, clazz);
                         }

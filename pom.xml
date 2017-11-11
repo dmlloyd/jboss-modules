@@ -131,6 +131,7 @@
                         <include>**/*Test.java</include>
                     </includes>
                     <forkMode>always</forkMode>
+                    <!--<argLine>-Xshareclasses</argLine>-->
                 </configuration>
             </plugin>
 
@@ -150,6 +151,20 @@
                             <excludeTransitive>true</excludeTransitive>
                             <includes>**/*.class</includes>
                             <outputDirectory>${project.build.directory}/generated-resources/META-INF/versions/9</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-ibm-supplement</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeGroupIds>org.jboss.modules</includeGroupIds>
+                            <includeArtifactIds>jboss-modules-ibm-supplement</includeArtifactIds>
+                            <excludeTransitive>true</excludeTransitive>
+                            <includes>**/*.class,META-INF/services/**</includes>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
@@ -189,6 +204,18 @@
             <groupId>org.jboss.modules</groupId>
             <artifactId>jboss-modules-jdk9-supplement</artifactId>
             <version>1.2.Final</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jboss.modules</groupId>
+                    <artifactId>jboss-modules</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.modules</groupId>
+            <artifactId>jboss-modules-ibm-supplement</artifactId>
+            <version>1.0.Final-SNAPSHOT</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>

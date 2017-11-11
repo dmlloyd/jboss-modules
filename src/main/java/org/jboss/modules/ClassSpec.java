@@ -30,6 +30,7 @@ public final class ClassSpec {
     private byte[] bytes;
     private CodeSource codeSource;
     private AssertionSetting assertionSetting = AssertionSetting.INHERIT;
+    private boolean shared = false;
 
     /**
      * Construct a new instance.
@@ -92,5 +93,23 @@ public final class ClassSpec {
             throw new IllegalArgumentException("assertionSetting is null");
         }
         this.assertionSetting = assertionSetting;
+    }
+
+    /**
+     * Determine whether these class bytes are from a shared cache.
+     *
+     * @return {@code true} if the bytes are from a shared cache, {@code false} otherwise
+     */
+    public boolean isShared() {
+        return shared;
+    }
+
+    /**
+     * Establish whether these class bytes are from a shared cache.
+     *
+     * @param shared {@code true} if the bytes are from a shared cache, {@code false} otherwise
+     */
+    public void setShared(final boolean shared) {
+        this.shared = shared;
     }
 }

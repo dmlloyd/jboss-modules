@@ -124,11 +124,23 @@ final class JarFileResourceLoader extends AbstractResourceLoader implements Iter
     }
 
     public synchronized ClassSpec getClassSpec(final String fileName) throws IOException {
+        return getClassSpec(fileName, fileName.replace('/', '.').replaceAll("\\.class$", ""), SharedClassCache.EMPTY);
+    }
+
+    public synchronized ClassSpec getClassSpec(final String fileName, final String className, final SharedClassCache classCache) throws IOException {
         final ClassSpec spec = new ClassSpec();
         final JarEntry entry = getJarEntry(fileName);
         if (entry == null) {
             // no such entry
             return null;
+        }
+        final byte[] sharedClassBytes = classCache.findSharedClass(rootUrl, className);
+        if (sharedClassBytes != null) {
+            CodeSource codeSource = createCodeSource(entry);
+            spec.setCodeSource(codeSource);
+            spec.setBytes(sharedClassBytes);
+            spec.setShared(true);
+            return spec;
         }
         final long size = entry.getSize();
         try (final InputStream is = jarFile.getInputStream(entry)) {
